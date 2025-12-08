@@ -1,0 +1,53 @@
+{% extends "main.html" %}
+{% load static %}
+
+{% block title %}Login – RetailShop{% endblock %}
+
+{% block content %}
+
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        
+        <h2 class="fw-bold mb-4">Login</h2>
+
+        {# --- Display Global Messages (e.g., from successful registration) --- #}
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+
+        <form method="POST">
+            {% csrf_token %}
+
+            {# --- Display Non-Field Errors (like invalid username/password combo) --- #}
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger mb-3">
+                    {{ form.non_field_errors }}
+                </div>
+            {% endif %}
+
+            {# --- Loop through form fields to apply Bootstrap classes --- #}
+            {% for field in form %}
+                <div class="mb-3">
+                    <label class="form-label">{{ field.label }}</label>
+                    {{ field }}
+                    
+                    {# Display field-specific errors #}
+                    {% for error in field.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+
+            <button class="btn btn-primary w-100" type="submit">Login</button>
+
+            <p class="mt-3">
+                Don’t have an account? <a href="{% url 'register' %}">Register here</a>
+            </p>
+        </form>
+
+    </div>
+</div>
+
+{% endblock %}

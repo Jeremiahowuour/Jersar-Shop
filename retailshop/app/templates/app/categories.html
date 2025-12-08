@@ -1,0 +1,52 @@
+{% extends 'base.html' %} 
+{% block title %}All Categories - Retail Shop{% endblock %}
+
+{% block content %}
+
+<div class="container mt-5">
+    <h2 class="mb-4 text-center">{{ title|default:"Product Categories" }}</h2>
+    <hr>
+
+    {% if categories %}
+        <div class="row row-cols-1 row-cols-md-3 g-4">
+            {% for category in categories %}
+                <div class="col">
+                    <div class="card h-100 shadow-sm border-0">
+                        <div class="card-body">
+                            
+                            <h5 class="card-title text-primary">{{ category.name }}</h5>
+                            
+                            <p class="card-text text-muted">
+                                {% if category.description %}
+                                    {{ category.description|truncatechars:100 }}
+                                {% else %}
+                                    No description available.
+                                {% endif %}
+                            </p>
+
+                            <a href="{% url 'products' %}?category={{ category.name }}" class="btn btn-outline-success btn-sm mt-2">
+                                View Products ({{ category.products.count }})
+                            </a>
+                            
+                            {% if request.user.is_superuser %}
+                            <a href="{% url 'update_category' category.slug %}" class="btn btn-outline-secondary btn-sm mt-2 float-end">
+                                Edit
+                            </a>
+                            {% endif %}
+
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+    {% else %}
+        <div class="alert alert-warning text-center" role="alert">
+            <h4 class="alert-heading">No Categories Found!</h4>
+            <p>Please create new categories in the Django Admin to start listing products.</p>
+        </div>
+    {% endif %}
+
+</div>
+
+{% endblock %}

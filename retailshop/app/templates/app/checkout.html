@@ -1,0 +1,27 @@
+{% extends "main.html" %}
+{% load static %}
+
+{% block title %}Checkout – Jersar Shop{% endblock %}
+
+{% block content %}
+
+<div class="row">
+    <div class="col-12 text-center">
+        <h1 class="fw-bold mb-4">Finalize Order & Checkout</h1>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="alert alert-warning text-center">
+            🚧 **Checkout Page Under Construction** 🚧
+            <p class="mt-2">
+                Your cart total is: <span class="fw-bold">ksh{{ cart_total|floatformat:2 }}</span>.
+                Implement the final address and payment selection forms here!
+            </p>
+        </div>
+
+        </div>
+</div>
+
+{% endblock %}

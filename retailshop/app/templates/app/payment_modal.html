@@ -1,0 +1,106 @@
+<div class="modal fade" id="paymentModal" tabindex="-1" aria-labelledby="paymentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="paymentModalLabel">Choose Payment for <span id="modal-product-name" class="fw-bold"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            
+            <div class="modal-body text-center" id="payment-options-body">
+                <p class="lead">How would you like to pay?</p>
+                
+                {# 1. M-PESA OPTION BUTTON: Toggles the form section #}
+                <button type="button" id="mpesa-btn-option" class="btn btn-lg btn-outline-success w-100 mb-3">
+                    <i class="fas fa-mobile-alt me-2"></i> 1. Lipa na M-Pesa
+                </button>
+                
+                {# 2. CASH OPTION LINK: Remains a direct link (will be updated by JS) #}
+                <a id="cash-option-link" href="#" class="btn btn-lg btn-outline-primary w-100">
+                    <i class="fas fa-money-bill-wave me-2"></i> 2. Pay by Cash
+                </a>
+            </div>
+            
+            {# --- 🛑 RECTIFICATION: M-Pesa Form Section (Initially Hidden) --- #}
+            <div class="modal-body d-none" id="mpesa-form-body">
+                <form id="mpesa-form" method="POST" action="">
+                    {% csrf_token %}
+                    <p class="mb-3 text-start">Enter your M-Pesa registered phone number to proceed with payment for <span id="modal-product-name-form" class="fw-bold"></span>.</p>
+                    
+                    {# Hidden field to carry the product ID #}
+                    <input type="hidden" name="product_id" id="mpesa-product-id">
+
+                    <div class="mb-3">
+                        <label for="phone_number" class="form-label float-start">Phone Number (e.g., 2547XXXXXXXX)</label>
+                        <input type="text" class="form-control" id="phone_number" name="phone_number" required pattern="^2547[0-9]{8}$" title="Enter a valid M-Pesa number starting with 2547">
+                    </div>
+                    
+                    <button type="submit" class="btn btn-success btn-lg w-100">Initiate M-Pesa Payment</button>
+                    <button type="button" id="back-to-options" class="btn btn-link mt-2">Back to Payment Options</button>
+                </form>
+            </div>
+            {# --- END M-Pesa Form Section --- #}
+            
+            <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+   // This should be inside a <script> tag (or file) included after the modal
+document.addEventListener('DOMContentLoaded', function() {
+    var paymentModal = document.getElementById('paymentModal');
+    
+    // Check if the modal exists before adding listeners
+    if (!paymentModal) return;
+
+    // --- Select Elements ---
+    var mpesaFormBody = document.getElementById('mpesa-form-body');
+    var paymentOptionsBody = document.getElementById('payment-options-body');
+    var mpesaBtnOption = document.getElementById('mpesa-btn-option');
+    var backToOptionsBtn = document.getElementById('back-to-options');
+    var mpesaForm = document.getElementById('mpesa-form');
+
+    // --- 1. Modal 'show' listener (Transfers data) ---
+    paymentModal.addEventListener('show.bs.modal', function (event) {
+        var button = event.relatedTarget;
+        
+        var productId = button.getAttribute('data-product-id');
+        var productName = button.getAttribute('data-product-name');
+        
+        // Update display names
+        paymentModal.querySelector('#modal-product-name').textContent = productName;
+        paymentModal.querySelector('#modal-product-name-form').textContent = productName;
+        
+        // Update form fields
+        paymentModal.querySelector('#mpesa-product-id').value = productId;
+        
+        // 🛑 IMPORTANT: Update the M-Pesa form action and Cash link dynamically
+        // Ensure your 'initiate_mpesa' view is defined in urls.py
+        mpesaForm.action = `/app/mpesa/initiate/${productId}/`;
+        
+        // Ensure your 'cash_checkout' view is defined in urls.py
+        paymentModal.querySelector('#cash-option-link').href = `/app/cash/checkout/${productId}/`;
+        
+        // Always start on the options view
+        paymentOptionsBody.classList.remove('d-none');
+        mpesaFormBody.classList.add('d-none');
+    });
+    
+    // --- 2. Button Listeners (Toggle views) ---
+
+    // Click M-Pesa button -> Show M-Pesa form
+    mpesaBtnOption.addEventListener('click', function() {
+        paymentOptionsBody.classList.add('d-none');
+        mpesaFormBody.classList.remove('d-none');
+    });
+
+    // Click Back button -> Show options
+    backToOptionsBtn.addEventListener('click', function() {
+        paymentOptionsBody.classList.remove('d-none');
+        mpesaFormBody.classList.add('d-none');
+    });
+});
+</script>
+</script>

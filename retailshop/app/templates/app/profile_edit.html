@@ -1,0 +1,84 @@
+{% extends "main.html" %}
+{% load static %}
+
+{% block title %}Edit Profile – RetailShop{% endblock %}
+
+{% block content %}
+
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <h1 class="fw-bold mb-4">Edit Profile</h1>
+        
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+
+        <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <div class="card p-4 shadow-sm mb-4">
+                
+                <h5 class="mb-3">Profile Image</h5>
+                <div class="text-center mb-3">
+                    <img 
+                        src="{% if user.profile.image %}{{ user.profile.image.url }}{% else %}{% static 'images/default_profile.png' %}{% endif %}" 
+                        alt="{{ user.username }} Profile Image" 
+                        class="rounded-circle border border-primary border-3 mb-2"
+                        style="width: 150px; height: 150px; object-fit: cover;"
+                    >
+                </div>
+                
+                <div class="mb-4">
+                    <label for="{{ profile_form.image.id_for_label }}" class="form-label">Change Image</label>
+                    {{ profile_form.image }} 
+                    {% if profile_form.image.errors %}
+                        <div class="text-danger small">{{ profile_form.image.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <hr>
+
+                <h5 class="mb-3">Account Details</h5>
+                
+                <div class="mb-3">
+                    <label for="{{ user_form.username.id_for_label }}" class="form-label">Username</label>
+                    <input type="text" 
+                           name="{{ user_form.username.name }}" 
+                           id="{{ user_form.username.id_for_label }}" 
+                           class="form-control" 
+                           value="{{ user.username }}"
+                           {% if user_form.username.errors %}is-invalid{% endif %}
+                           required>
+                    {% if user_form.username.errors %}
+                        <div class="invalid-feedback">{{ user_form.username.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-3">
+                    <label for="{{ user_form.email.id_for_label }}" class="form-label">Email</label>
+                    <input type="email" 
+                           name="{{ user_form.email.name }}" 
+                           id="{{ user_form.email.id_for_label }}" 
+                           class="form-control" 
+                           value="{{ user.email }}"
+                           {% if user_form.email.errors %}is-invalid{% endif %}
+                           required>
+                    {% if user_form.email.errors %}
+                        <div class="invalid-feedback">{{ user_form.email.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                </div>
+            
+            <div class="d-flex justify-content-between">
+                <button type="submit" class="btn btn-success btn-lg">Save Changes</button>
+                <a href="{% url 'profile' %}" class="btn btn-secondary btn-lg">Cancel</a>
+            </div>
+        </form>
+        
+    </div>
+</div>
+
+{% endblock %}

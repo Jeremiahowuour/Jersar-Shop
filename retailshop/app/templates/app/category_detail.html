@@ -1,0 +1,29 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container">
+    <h2 class="mt-4 mb-4">Browse Products in: **{{ category.name }}**</h2>
+    <p>{{ category.description }}</p>
+
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+        {% for product in products %}
+        <div class="col">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">{{ product.name }}</h5>
+                    <p class="card-text text-muted">
+                        $ {{ product.price }}
+                    </p>
+                    <a href="{% url 'product_detail' product.id %}" class="btn btn-outline-dark">View Details</a>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <p class="alert alert-info">There are no products listed in the **{{ category.name }}** category yet.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock content %}

@@ -1,0 +1,89 @@
+{% extends "main.html" %}
+{% load static %}
+
+{% block title %}Home – RetailShop{% endblock %} 
+
+{% block content %}
+
+<div class="p-5 mb-4 bg-light rounded-3 shadow-sm">
+    <div class="container py-5">
+        <h1 class="display-4 fw-bold">Welcome to Jersar RetailShop</h1>
+        <p class="col-md-8 fs-5">
+            Discover the best deals on fashion, gadgets, electronics, accessories and more.
+        </p>
+        <a href="{% url 'products' %}" class="btn btn-primary btn-lg px-4">Shop Now</a>
+    </div>
+</div>
+
+
+<h2 class="mb-4 fw-bold">Shop by Category</h2>
+<div class="row g-4 mb-5">
+    
+    {% for cat_name in featured_categories_names %} 
+    <div class="col-md-4 col-lg-2">
+        <div class="card border-0 shadow-sm h-100">
+            <img src="{% static 'images/cat-placeholder.jpg' %}" class="card-img-top" alt="{{ cat_name }}">
+            <div class="card-body text-center d-flex flex-column justify-content-between">
+                <h5 class="card-title fw-semibold">{{ cat_name }}</h5>
+                <a href="{% url 'products' %}?category={{ cat_name }}" class="btn btn-outline-primary btn-sm mt-2">Browse</a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div> 
+
+{% for category in categories %}
+    <h2 class="fw-bold mb-4 mt-5"> {{ category.name }} Deals</h2>
+    <div class="row row-cols-1 row-cols-md-3 row-cols-lg-4 g-4 mb-5">
+
+        {% for product in category.products.all %} {% if forloop.counter0 < 4 %} <div class="col">
+                <div class="card h-100 shadow-sm">
+                    {% if product.image %}
+                        <img src="{{ product.image.url }}" class="card-img-top product-img" alt="{{ product.name }}">
+                    {% else %}
+                        <img src="{% static 'images/prod-placeholder.jpg' %}" class="card-img-top product-img" alt="{{ product.name }}">
+                    {% endif %}
+
+                    <div class="card-body">
+                        <h5 class="card-title">{{ product.name }}</h5>
+                        <p class="card-text text-muted">Ksh {{ product.price|floatformat:2 }}</p>
+                    </div>
+                    <div class="card-footer bg-light d-flex justify-content-between">
+                        <a href="{% url 'product_detail' product.id %}" class="btn btn-outline-secondary btn-sm flex-grow-1 me-2">View</a>
+                        
+                        <a href="{% url 'add_to_cart' product.id %}" class="btn btn-primary btn-sm flex-grow-1">Add to Cart</a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        {% empty %}
+            <div class="col-12"><p>No featured products in this category yet.</p></div>
+        {% endfor %}
+
+    </div>
+{% endfor %}
+
+
+    <div class="bg-primary text-white p-5 rounded-3 mt-5">
+        <div class="container">
+            <h3>Subscribe for Updates</h3>
+            <p class="mb-4">Get notified about discounts, new arrivals, and exclusive deals.</p>
+
+            <form class="row g-2" method="POST">
+                {% csrf_token %} 
+                
+                
+                <div class="col-md-8">
+                    <input type="email" class="form-control form-control-lg" placeholder="Enter email" name="email">
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-dark btn-lg w-100">Subscribe</button>
+                </div>
+                
+            </form>
+        </div>
+    </div>
+    </div>
+</div>
+
+{% endblock %}

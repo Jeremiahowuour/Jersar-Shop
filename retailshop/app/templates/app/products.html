@@ -1,0 +1,94 @@
+{% extends "main.html" %}
+{% load static %}
+
+{% block title %}{{ title }} – RetailShop{% endblock %} 
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">{{ title }}</h1>
+
+    <div class="row">
+        <div class="col-lg-3">
+            <h5 class="fw-bold mb-3">Filter by Category</h5>
+            <div class="list-group mb-4">
+                <a href="{% url 'products' %}" class="list-group-item list-group-item-action {% if not selected_category %}active{% endif %}">
+                    All Categories
+                </a>
+                
+                {% for cat in categories %}
+                <a href="{% url 'products' %}?category={{ cat.name }}" 
+                   class="list-group-item list-group-item-action {% if selected_category == cat.name %}active{% endif %}">
+                    {{ cat.name }}
+                </a>
+                {% endfor %}
+            </div>
+            
+            <h5 class="fw-bold mb-3">Search</h5>
+            <form method="GET" action="{% url 'products' %}" class="input-group mb-4">
+                <input type="text" name="q" placeholder="Search products..." class="form-control" value="{{ request.GET.q|default:'' }}">
+                <button type="submit" class="btn btn-primary">Go</button>
+            </form>
+        </div>
+        
+        <div class="col-lg-9">
+            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                
+                {% for product in products %}
+                <div class="col">
+                    <div class="card h-100 shadow-sm">
+                        {% if product.image %}
+                            <img src="{{ product.image.url }}" class="card-img-top product-img" alt="{{ product.name }}">
+                        {% else %}
+                            <img src="{% static 'images/prod-placeholder.jpg' %}" class="card-img-top product-img" alt="{{ product.name }}">
+                        {% endif %}
+
+                        <div class="card-body">
+                            <h5 class="card-title">{{ product.name }}</h5>
+                            <p class="card-text text-muted">Ksh {{ product.price|floatformat:2 }}</p>
+                            <p class="card-text small text-truncate">{{ product.description }}</p>
+                        </div>
+                        
+                        {# 🛑 RECTIFIED CARD FOOTER WITH DIRECT PAYMENT FORMS #}
+                        <div class="card-footer bg-light">
+                            <a href="{% url 'product_detail' product.id %}" class="btn btn-outline-secondary btn-sm w-100 mb-2">View Details</a>
+
+                            <form method="POST" action="{% url 'initiate_mpesa' product.id %}" class="mb-2">
+                                {% csrf_token %}
+                                <div class="input-group input-group-sm">
+                                    <input type="text" name="phone_number" class="form-control" placeholder="M-Pesa 2547..." required 
+                                           pattern="^2547[0-9]{8}$" title="e.g., 2547xxxxxxxx">
+                                    <input type="hidden" name="quantity" value="1">
+                                    <button type="submit" class="btn btn-success">M-Pesa Buy</button>
+                                </div>
+                            </form>
+
+                            <form method="POST" action="{% url 'cash_checkout' product.id %}" class="mb-2">
+                                {% csrf_token %}
+                                <input type="hidden" name="quantity" value="1">
+                                <button type="submit" class="btn btn-primary btn-sm w-100">Pay by Cash</button>
+                            </form>
+
+                            <form method="POST" action="{% url 'add_to_cart' product.id %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="quantity" value="1">
+                                <button type="submit" class="btn btn-info btn-sm w-100">Add to Cart</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12">
+                    <div class="alert alert-info">
+                        No products found {% if selected_category %}in the category "{{ selected_category }}"{% elif request.GET.q %}matching the search term "{{ request.GET.q }}"{% endif %}.
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %} 
+
+{% block extra_js %}
+{% endblock %}
