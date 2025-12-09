@@ -1,0 +1,123 @@
+/* --- 1. PRODUCT CARD: Image Sizing and Consistency --- */
+
+.product-image-container {
+    /* Critical: Set a fixed height for all product image areas (ensures uniform card height) */
+    height: 250px; 
+    overflow: hidden;
+    
+    /* Center the image within the container */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    /* Optional: Add some padding to prevent images from touching edges */
+    padding: 10px; 
+}
+
+.product-img {
+    width: 100%;
+    height: 100%; /* Ensures it respects the container height */
+    
+    /* CRITICAL: Scales the image down to fit entirely inside the container without cropping (contain) */
+    object-fit: contain; 
+    
+    transition: transform 0.3s ease-in-out; /* Smooth transition for hover effect */
+}
+
+/* Hover Effect: Makes the image zoom slightly when the user hovers over the card */
+.product-card:hover .product-img {
+    transform: scale(1.05); 
+}
+
+
+/* --- 2. PRODUCT CARD: Vertical Alignment (Flexbox) --- */
+
+.product-card {
+    /* Set card itself to be a flex container */
+    display: flex;
+    flex-direction: column;
+}
+
+.product-card a {
+    /* The clickable link wrapper must also be a flex container to push elements */
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1; /* Makes the link wrapper fill all available space */
+    text-decoration: none; 
+    color: inherit;
+}
+
+.product-card .card-body {
+    flex-grow: 1; /* Makes the body content fill the remaining space */
+}
+
+.product-card .card-footer {
+    /* Pushes the footer (buttons) down to the bottom of the card, ensuring alignment */
+    margin-top: auto; 
+}
+
+
+/* --- 3. CATEGORY BANNER (Wider Banners) --- */
+
+.category-banner-image-container {
+    height: 200px; /* Uniform height for category banners */
+    overflow: hidden;
+}
+
+.category-banner-img {
+    width: 100%;
+    height: 100%;
+    /* Use 'cover' for banners to ensure the container is fully filled */
+    object-fit: cover; 
+}
+
+/* **UPDATED CLASS** to reflect the use of category-banner-card */
+.category-banner-card {
+    transition: transform 0.2s;
+}
+.category-banner-card:hover {
+    /* Lifts the card and adds a subtle border highlight */
+    transform: translateY(-5px); 
+    border: 1px solid var(--bs-primary) !important;
+}
+
+
+/* --- 4. HERO SECTION (Banner with Overlay) --- */
+
+/* Minor Jumbotron Style (DEPRECATED/Unused if using hero-banner) */
+/* .hero-section {
+    background-image: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+} */
+
+.hero-banner {
+    /* Ensures the image covers the entire div */
+    background-size: cover; 
+    /* Centers the image within the div */
+    background-position: center; 
+    /* Prevents the image from repeating */
+    background-repeat: no-repeat;
+    /* Gives the image a slight fixed height for consistency */
+    min-height: 400px; 
+    position: relative;
+    z-index: 1;
+}
+
+/* Add a subtle overlay for text readability */
+.hero-banner::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    /* Dark semi-transparent color */
+    background: rgba(0, 0, 0, 0.3); 
+    border-radius: 0.3rem; /* Matches Bootstrap rounded-3 */
+    z-index: 2;
+}
+
+/* Bring text content above the overlay */
+.hero-banner .container {
+    position: relative;
+    z-index: 3;
+}

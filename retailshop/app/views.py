@@ -12,16 +12,49 @@ from django.db.models import Q, Avg, F
 # Import forms and models from your app
 from .forms import UserUpdateForm, ProfileUpdateForm, UserRegisterForm # 🆕 Added UserRegisterForm
 from .models import Profile, Category, Product, Review, Cart, CartItem 
+from .models import Order  # For sales dashboard
+from django.utils import timezone
+from django.db.models import Sum, Count, Avg
+from datetime import timedelta
+from django.contrib.admin.views.decorators import staff_member_required
+from django.db.models.functions import TruncDate
 
+from .forms import UserUpdateForm, ProfileUpdateForm, UserRegisterForm, CheckoutForm # 🟢 Ensure CheckoutForm is here
+from .models import Profile, Category, Product, Review, Cart, CartItem
+
+from django.contrib.auth.views import LoginView as BaseLoginView 
 # Import M-Pesa client
 from django_daraja.mpesa.core import MpesaClient
+from django.urls import reverse_lazy
 
 # 🎯 HOME VIEW
+from django.shortcuts import render
+from .models import Category, Product # Ensure your Product model is imported
+
 def home(request):
-    """Renders the homepage, fetching all categories with related products."""
-    all_categories = Category.objects.prefetch_related('products').all()
+    """
+    Renders the homepage, fetching categories for banners 
+    and a selection of random products for the main feed.
+    """
+    
+    # 1. Fetch Categories for Banners
+    # We use prefetch_related if you need to access products related to categories 
+    # anywhere else on the page, but for simple banners, .all() is fine too.
+    categories = Category.objects.all() 
+    
+    # 2. Fetch Randomized Products for the Main Feed
+    # We fetch up to 8 products randomly. 
+    # The '.order_by('?').' is crucial for random selection.
+    try:
+        random_products = Product.objects.all().order_by('?')[:8]
+    except Exception as e:
+        # Fallback in case the random order fails (e.g., if the DB is empty or misconfigured)
+        print(f"Error fetching random products: {e}")
+        random_products = Product.objects.none()
+
     context = {
-        'categories': all_categories,
+        'categories': categories,        # Used for the Category Banners section
+        'random_products': random_products, # Used for the Randomized Product Feed section
     }
     return render(request, 'app/home.html', context)
 
@@ -94,52 +127,66 @@ def product_detail(request, pk):
 
 #  ADD TO CART VIEW (Consolidated, database-driven)
  
-
 @login_required(login_url='login')
 def add_to_cart(request, product_id):
-   
-    product = get_object_or_404(Product, pk=product_id)
     
-    # 1. Get the user's Cart object (It is now guaranteed to exist)
+    product = get_object_or_404(Product, pk=product_id)
     cart, _ = Cart.objects.get_or_create(user=request.user)
-
+    
+    # --- DETERMINE QUANTITY BASED ON REQUEST TYPE ---
+    
+    quantity = 1  # Default quantity for all requests unless specified otherwise
+    
     if request.method == 'POST':
-        # Get quantity from the form, defaulting to 1 and ensuring it's an integer > 0
+        # Logic for POST (coming from the Product Detail page form)
         try:
             quantity = int(request.POST.get('quantity', 1))
-            if quantity <= 0:
-                quantity = 1
         except ValueError:
             quantity = 1
-
-        # 2. Try to retrieve the existing CartItem or create a new one
-        cart_item, created = CartItem.objects.get_or_create(
-            cart=cart, 
-            product=product,
-            # If it's a new item, 'defaults' will set the initial quantity
-            defaults={'quantity': quantity} 
-        )
-
-        if created:
-            # 3. If a new item was created
-            messages.success(request, f"Added {quantity} x '{product.name}' to your cart.")
-        else:
-            # 4. If the item already exists, update its quantity atomically
-            cart_item.quantity = F('quantity') + quantity
-            cart_item.save()
-            
-            # Since F() updates are applied at the database level, 
-            # we need to reload the object to see the updated value for the message.
-            cart_item.refresh_from_db()
-
-            messages.success(
-                request, 
-                f"Added {quantity} more to the cart. Total: {cart_item.quantity} x {product.name}."
-            )
     
-    # If the request method is GET, it should generally redirect to prevent double-submits
-    return redirect('cart_view')
+    elif request.method == 'GET':
+        # Logic for GET (coming from the Home Page direct link)
+        # We check the URL query string for a quantity, otherwise, it remains the default of 1.
+        try:
+            # We assume you updated the home link to include ?quantity=1 (as previously advised)
+            # Example: <a href="{% url 'add_to_cart' product.id %}?quantity=1" ...>
+            quantity_param = request.GET.get('quantity')
+            if quantity_param:
+                 quantity = int(quantity_param)
+        except (TypeError, ValueError):
+            quantity = 1 # Fallback to 1
+    
+    # Ensure quantity is valid before proceeding
+    if quantity <= 0:
+        messages.error(request, "Invalid quantity specified.")
+        return redirect('cart_view')
 
+
+    # --- CORE ADD/UPDATE LOGIC (Moved outside of the request method check) ---
+    
+    # 2. Try to retrieve the existing CartItem or create a new one
+    cart_item, created = CartItem.objects.get_or_create(
+        cart=cart, 
+        product=product,
+        # If it's a new item, 'defaults' will set the initial quantity
+        defaults={'quantity': quantity} 
+    )
+
+    if created:
+        # 3. If a new item was created
+        messages.success(request, f"Added {quantity} x '{product.name}' to your cart.")
+    else:
+        # 4. If the item already exists, update its quantity atomically
+        cart_item.quantity = F('quantity') + quantity
+        cart_item.save()
+        cart_item.refresh_from_db() # Reload to see the updated value for the message.
+        
+        messages.success(
+            request, 
+            f"Added {quantity} more to the cart. Total: {cart_item.quantity} x {product.name}."
+        )
+    
+    return redirect('cart_view')
 #  CART VIEW
 @login_required(login_url='login')
 def cart_view(request):
@@ -385,26 +432,35 @@ def initiate_mpesa(request, product_id):
 
     # Should only be reachable via POST from the form
     return redirect('products')
+
+
 @login_required(login_url='login')
 def checkout_view(request):
     """
     Renders the final checkout page, confirming cart contents and collecting
-    final order details (like address and selected payment method).
+    final order details (like address and selected payment method) using the CheckoutForm.
     """
+    
     # Fetch the user's cart and calculate total
     try:
+        # Use select_related to efficiently fetch product details for the summary
         cart = Cart.objects.get(user=request.user)
-        cart_items = cart.items.all()
+        cart_items = cart.items.select_related('product')
         cart_total = sum(item.subtotal() for item in cart_items)
     except Cart.DoesNotExist:
         messages.error(request, "Your cart is empty.")
         return redirect('products') # Redirect if nothing to checkout
 
+    # 🟢 CRITICAL: Instantiate the CheckoutForm
+    address_form = CheckoutForm()
+
     context = {
+        'cart': cart,             # Pass the cart object itself (used for get_total_price on button)
         'cart_items': cart_items,
         'cart_total': cart_total,
-        # You would add forms for shipping/address here later
+        'address_form': address_form, # Pass the instantiated form to the template
     }
+    
     return render(request, 'app/checkout.html', context)
 
 def mpesa_callback(request):
@@ -462,3 +518,126 @@ def cash_checkout_view(request, product_id):
         return redirect('home') # Redirect to a success page
 
     return redirect('products') # Redirect if accessed via GET
+
+# app/views.py
+
+@staff_member_required # Ensures only staff/superusers can access
+def sales_dashboard(request):
+    # Calculate key metrics
+    seven_days_ago = timezone.now() - timedelta(days=7)
+
+    # Total sales amount (assuming 'Complete' status)
+    total_sales = Order.objects.filter(status='Complete').aggregate(Sum('total_amount'))['total_amount__sum']
+
+    # Sales last 7 days
+    recent_sales = Order.objects.filter(
+        status='Complete',
+        created_at__gte=seven_days_ago
+    ).aggregate(
+        total_count=Count('id'),
+        total_revenue=Sum('total_amount')
+    )
+
+    context = {
+        'total_sales': total_sales or 0,
+        'recent_sales_count': recent_sales.get('total_count', 0),
+        'recent_sales_revenue': recent_sales.get('total_revenue', 0) or 0,
+        # ... you can add history data grouped by day here
+    }
+    return render(request, 'app/sales_dashboard.html', context)
+
+
+@staff_member_required
+def sales_dashboard(request):
+    # ... (KPI calculations remain the same)
+    
+    thirty_days_ago = timezone.now() - timedelta(days=30)
+
+    # Calculate Daily Sales History
+    sales_history = Order.objects.filter(
+        status='Complete',
+        created_at__gte=thirty_days_ago
+    ).annotate(
+        date=TruncDate('created_at')
+    ).values('date').annotate(
+        order_count=Count('id'),
+        revenue=Sum('total_amount'),
+        avg_order_value=Avg('total_amount')
+    ).order_by('-date') # Display newest dates first
+
+    context = {
+        # ... (Your existing KPI context variables)
+        'sales_history': sales_history, # <-- Pass the new calculated data to the template
+    }
+    return render(request, 'app/sales_dashboard.html', context)
+
+@login_required(login_url='login')
+def process_order(request):
+    """Handles the form submission, creates the Order, and empties the cart."""
+    if request.method == 'POST':
+        address_form = CheckoutForm(request.POST)
+        payment_method = request.POST.get('payment_method')
+        
+        if address_form.is_valid():
+            try:
+                cart = Cart.objects.get(user=request.user)
+            except Cart.DoesNotExist:
+                messages.error(request, "Cart not found.")
+                return redirect('home')
+            
+            # 1. Create the Order object
+            order = Order.objects.create(
+                user=request.user,
+                total_amount=cart.get_total_price(),
+                payment_method=payment_method,
+                status='Pending',
+                
+                # Add shipping details from the form
+                first_name=address_form.cleaned_data['first_name'],
+                phone_number=address_form.cleaned_data['phone_number'],
+                address_line_1=address_form.cleaned_data['address_line_1'],
+                city=address_form.cleaned_data['city'],
+                # ... include all necessary form fields here
+            )
+
+            # 2. Transfer CartItems to OrderItems
+            for cart_item in cart.items.all():
+                OrderItem.objects.create(
+                    order=order,
+                    product=cart_item.product,
+                    quantity=cart_item.quantity,
+                    price=cart_item.product.price
+                )
+                
+            # 3. Clear the Cart
+            cart.items.all().delete()
+            
+            messages.success(request, f"Order #{order.id} placed successfully! Thank you.")
+            return redirect('order_confirmation', order_id=order.id)
+        
+        else:
+            messages.error(request, "Please correct the errors in your address.")
+            return redirect('checkout')
+            
+    return redirect('checkout') # Redirect GET requests away
+
+
+# 🎯 CUSTOM LOGIN VIEW
+class CustomLoginView(BaseLoginView):
+    """
+    A custom login view that ensures the 'next' parameter is respected,
+    making sure the user returns to the page they intended (e.g., 'add to cart').
+    """
+    def get_success_url(self):
+        # 1. Check if the 'next' parameter is present in the GET request
+        # This will contain the URL the user was trying to access (e.g., /add-to-cart/5/)
+        next_url = self.request.GET.get('next')
+
+        if next_url:
+            # If 'next' is present, return to that URL
+            return next_url
+        
+        # 2. If 'next' is NOT present (regular login from navbar), 
+        # fall back to the cart view explicitly.
+        # This completely overrides the LOGIN_REDIRECT_URL setting.
+        return reverse_lazy('cart_view')

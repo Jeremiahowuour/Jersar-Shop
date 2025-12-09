@@ -6,16 +6,30 @@ from django.urls import reverse
 # F is imported here, but not used in models.py itself (it's for views)
 # It's better practice to import it in views.py, but keeping it here is harmless.
 from django.db.models import F 
+from django.utils import timezone
 
 
 # --- CORE E-COMMERCE MODELS ---
 
 # 1. Category Model (Consolidated and defined only once)
+# retailshop/app/models.py
+
+from django.db import models
+from django.urls import reverse # Required for get_absolute_url
+
 class Category(models.Model):
     name = models.CharField(max_length=100, unique=True)
     slug = models.SlugField(max_length=100, unique=True)
     description = models.TextField(blank=True) 
-
+    
+    #  Banner Image for the Home Page
+    banner_image = models.ImageField(
+        upload_to='category_banners/', # Images stored in media/category_banners/
+        null=True, 
+        blank=True,
+        help_text="Optional banner image for the homepage category section."
+    )
+    
     class Meta:
         verbose_name_plural = 'Categories'
 
@@ -23,9 +37,8 @@ class Category(models.Model):
         return self.name
 
     def get_absolute_url(self):
-        # Requires 'from django.urls import reverse' at the top
-        return reverse('category_products', args=[self.slug])
-
+        pass 
+    
 # 2. Product Model
 class Product(models.Model):
     category = models.ForeignKey(
@@ -121,3 +134,20 @@ def save_user_profile(sender, instance, **kwargs):
     except Profile.DoesNotExist:
         # If the profile doesn't exist for some reason, create it
         Profile.objects.create(user=instance)
+        
+        
+# --- ORDER MODELS ---
+
+class Order(models.Model):
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    # Total amount, status, etc.
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(max_length=50, default='Pending') 
+    created_at = models.DateTimeField(default=timezone.now)
+    # ... add other fields like shipping address, payment method
+
+class OrderItem(models.Model):
+    order = models.ForeignKey(Order, related_name='items', on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True)
+    quantity = models.PositiveIntegerField(default=1)
+    price = models.DecimalField(max_digits=10, decimal_places=2)

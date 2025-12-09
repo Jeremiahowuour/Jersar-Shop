@@ -3,6 +3,7 @@ from . import views
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
+from app.views import CustomLoginView
 
 urlpatterns = [
     # 🛑 REMOVED THE PROBLEM LINE: path('mpesa/', views.mpesa_payment, name='mpesa_payment'),
@@ -42,9 +43,12 @@ urlpatterns = [
     path('profile/', views.profile_view, name='profile'),
     path('profile/edit/', views.profile_edit_view, name='profile_edit'),
     path('checkout/', views.checkout_view, name='checkout'),
+    path('order/process/', views.process_order, name='process_order'),
     # CATEGORY Views
     path('categories/', views.categories, name='categories'), 
     path('categories/update/<slug:category_slug>/', views.update_category, name='update_category'),
+    path('admin/sales/', views.sales_dashboard, name='sales_dashboard'),
+    path('login/', CustomLoginView.as_view(template_name='app/login.html'), name='login'),
 ]
 
 # Static/Media Files Configuration (Keep this at the end)

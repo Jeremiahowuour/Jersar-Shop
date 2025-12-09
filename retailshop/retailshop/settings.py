@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'app',
     'django_daraja',
+    'widget_tweaks',
     
 ]
 
@@ -131,7 +132,9 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # URL to redirect to after successful login (default is /accounts/profile/)
-LOGIN_REDIRECT_URL = '/'  # Redirects to the root URL (your home page)
+LOGIN_URL = 'login/' # Must match the exact path in your urls.py
+
+LOGIN_REDIRECT_URL = 'profile'  # Redirects to the root URL (your home page)
 # OR if you have a dashboard view:
 # LOGIN_REDIRECT_URL = 'dashboard'
 

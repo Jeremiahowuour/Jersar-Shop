@@ -1,6 +1,6 @@
 {% extends "main.html" %}
 {% load static %}
-
+{% load widget_tweaks %}
 {% block title %}Edit Profile – RetailShop{% endblock %}
 
 {% block content %}
@@ -31,10 +31,12 @@
                 </div>
                 
                 <div class="mb-4">
-                    <label for="{{ profile_form.image.id_for_label }}" class="form-label">Change Image</label>
-                    {{ profile_form.image }} 
-                    {% if profile_form.image.errors %}
-                        <div class="text-danger small">{{ profile_form.image.errors }}</div>
+                    <label for="{{ p_form.image.id_for_label }}" class="form-label">Change Image</label>
+                    
+                    {{ p_form.image }} 
+                    
+                    {% if p_form.image.errors %}
+                        <div class="text-danger small">{{ p_form.image.errors }}</div>
                     {% endif %}
                 </div>
                 
@@ -43,36 +45,52 @@
                 <h5 class="mb-3">Account Details</h5>
                 
                 <div class="mb-3">
-                    <label for="{{ user_form.username.id_for_label }}" class="form-label">Username</label>
-                    <input type="text" 
-                           name="{{ user_form.username.name }}" 
-                           id="{{ user_form.username.id_for_label }}" 
-                           class="form-control" 
-                           value="{{ user.username }}"
-                           {% if user_form.username.errors %}is-invalid{% endif %}
-                           required>
-                    {% if user_form.username.errors %}
-                        <div class="invalid-feedback">{{ user_form.username.errors }}</div>
-                    {% endif %}
+                    <label for="{{ u_form.username.id_for_label }}" class="form-label">Username</label>
+                    {{ u_form.username|add_class:"form-control" }}
+                    {% for error in u_form.username.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
                 </div>
 
                 <div class="mb-3">
-                    <label for="{{ user_form.email.id_for_label }}" class="form-label">Email</label>
-                    <input type="email" 
-                           name="{{ user_form.email.name }}" 
-                           id="{{ user_form.email.id_for_label }}" 
-                           class="form-control" 
-                           value="{{ user.email }}"
-                           {% if user_form.email.errors %}is-invalid{% endif %}
-                           required>
-                    {% if user_form.email.errors %}
-                        <div class="invalid-feedback">{{ user_form.email.errors }}</div>
-                    {% endif %}
+                    <label for="{{ u_form.email.id_for_label }}" class="form-label">Email</label>
+                    {{ u_form.email|add_class:"form-control" }}
+                    {% for error in u_form.email.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
                 </div>
                 
+                <div class="mb-3">
+                    <label for="{{ u_form.first_name.id_for_label }}" class="form-label">First Name</label>
+                    {{ u_form.first_name|add_class:"form-control" }}
                 </div>
-            
-            <div class="d-flex justify-content-between">
+                
+                <div class="mb-3">
+                    <label for="{{ u_form.last_name.id_for_label }}" class="form-label">Last Name</label>
+                    {{ u_form.last_name|add_class:"form-control" }}
+                </div>
+                
+                <hr>
+                
+                <h5 class="mb-3">Contact and Location</h5>
+
+                <div class="mb-3">
+                    <label for="{{ p_form.phone_number.id_for_label }}" class="form-label">Phone Number</label>
+                    {{ p_form.phone_number|add_class:"form-control" }}
+                    {% for error in p_form.phone_number.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                
+                <div class="mb-3">
+                    <label for="{{ p_form.address.id_for_label }}" class="form-label">Address</label>
+                    {{ p_form.address|add_class:"form-control" }}
+                    {% for error in p_form.address.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                
+                </div> <div class="d-flex justify-content-between">
                 <button type="submit" class="btn btn-success btn-lg">Save Changes</button>
                 <a href="{% url 'profile' %}" class="btn btn-secondary btn-lg">Cancel</a>
             </div>

@@ -5,84 +5,113 @@
 
 {% block content %}
 
-<div class="p-5 mb-4 bg-light rounded-3 shadow-sm">
+<div class="p-5 mb-5 text-white rounded-3 shadow-lg hero-banner" style="background-image: url('{% static 'img/banner/hero_banner.jpg' %}');">
     <div class="container py-5">
-        <h1 class="display-4 fw-bold">Welcome to Jersar RetailShop</h1>
-        <p class="col-md-8 fs-5">
-            Discover the best deals on fashion, gadgets, electronics, accessories and more.
+        <h1 class="display-3 fw-bolder">Welcome to Jersar RetailShop 🎉</h1>
+        <p class="col-md-8 fs-5 lead">
+            Discover the best deals on fashion, gadgets, electronics, accessories, and many more.
         </p>
-        <a href="{% url 'products' %}" class="btn btn-primary btn-lg px-4">Shop Now</a>
+        <a href="{% url 'products' %}" class="btn btn-warning btn-lg px-5 mt-3 fw-bold">Shop Now</a>
     </div>
 </div>
 
+---
 
-<h2 class="mb-4 fw-bold">Shop by Category</h2>
+<h2 class="mb-4 fw-bold text-center">Explore Our Categories</h2>
 <div class="row g-4 mb-5">
     
-    {% for cat_name in featured_categories_names %} 
-    <div class="col-md-4 col-lg-2">
-        <div class="card border-0 shadow-sm h-100">
-            <img src="{% static 'images/cat-placeholder.jpg' %}" class="card-img-top" alt="{{ cat_name }}">
-            <div class="card-body text-center d-flex flex-column justify-content-between">
-                <h5 class="card-title fw-semibold">{{ cat_name }}</h5>
-                <a href="{% url 'products' %}?category={{ cat_name }}" class="btn btn-outline-primary btn-sm mt-2">Browse</a>
+    {% for category in categories %} 
+    <div class="col-md-6 col-lg-4"> 
+        <div class="card bg-light border-0 category-banner-card shadow-sm h-100">
+            <div class="card-body p-0 d-flex flex-column"> 
+                
+                <div class="category-banner-image-container">
+                    {% if category.banner_image %}
+                        <img src="{{ category.banner_image.url }}" class="card-img-top category-banner-img" alt="{{ category.name }} Banner">
+                    {% else %}
+                        <img src="{% static 'images/banner-placeholder.jpg' %}" class="card-img-top category-banner-img" alt="{{ category.name }} Banner">
+                    {% endif %}
+                </div>
+                
+                <div class="p-4 text-center flex-grow-1 d-flex flex-column justify-content-between">
+                    <h3 class="card-title fw-bold text-uppercase mb-2">{{ category.name }}</h3>
+                    
+                    {% if category.description %}
+                        <p class="text-muted small mb-3">{{ category.description|truncatechars:80 }}</p>
+                    {% endif %}
+
+                    <a href="{% url 'products' %}?category={{ category.name }}" class="btn btn-outline-primary btn-lg w-100 fw-bold mt-auto">
+                        Browse Products
+                    </a>
+                </div>
             </div>
         </div>
     </div>
     {% endfor %}
 </div> 
 
-{% for category in categories %}
-    <h2 class="fw-bold mb-4 mt-5"> {{ category.name }} Deals</h2>
-    <div class="row row-cols-1 row-cols-md-3 row-cols-lg-4 g-4 mb-5">
+---
 
-        {% for product in category.products.all %} {% if forloop.counter0 < 4 %} <div class="col">
-                <div class="card h-100 shadow-sm">
+<h2 class="fw-bold mb-4 mt-5 border-bottom pb-2"> Featured Products & Deals ✨</h2>
+<div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-4 mb-5">
+
+    {% for product in random_products %} 
+    <div class="col">
+        <div class="card h-100 shadow product-card border-0 d-flex flex-column">
+            
+            <a href="{% url 'product_detail' product.id %}" class="text-decoration-none text-dark d-flex flex-column flex-grow-1">
+                
+                <div class="product-image-container">
                     {% if product.image %}
                         <img src="{{ product.image.url }}" class="card-img-top product-img" alt="{{ product.name }}">
                     {% else %}
                         <img src="{% static 'images/prod-placeholder.jpg' %}" class="card-img-top product-img" alt="{{ product.name }}">
                     {% endif %}
-
-                    <div class="card-body">
-                        <h5 class="card-title">{{ product.name }}</h5>
-                        <p class="card-text text-muted">Ksh {{ product.price|floatformat:2 }}</p>
-                    </div>
-                    <div class="card-footer bg-light d-flex justify-content-between">
-                        <a href="{% url 'product_detail' product.id %}" class="btn btn-outline-secondary btn-sm flex-grow-1 me-2">View</a>
-                        
-                        <a href="{% url 'add_to_cart' product.id %}" class="btn btn-primary btn-sm flex-grow-1">Add to Cart</a>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-        {% empty %}
-            <div class="col-12"><p>No featured products in this category yet.</p></div>
-        {% endfor %}
-
-    </div>
-{% endfor %}
-
-
-    <div class="bg-primary text-white p-5 rounded-3 mt-5">
-        <div class="container">
-            <h3>Subscribe for Updates</h3>
-            <p class="mb-4">Get notified about discounts, new arrivals, and exclusive deals.</p>
-
-            <form class="row g-2" method="POST">
-                {% csrf_token %} 
-                
-                
-                <div class="col-md-8">
-                    <input type="email" class="form-control form-control-lg" placeholder="Enter email" name="email">
-                </div>
-                <div class="col-md-4">
-                    <button type="submit" class="btn btn-dark btn-lg w-100">Subscribe</button>
                 </div>
                 
-            </form>
+                <div class="card-body pb-2 flex-grow-1"> 
+                    <h6 class="card-title text-truncate mb-1 fw-bold">{{ product.name }}</h6>
+                    <p class="small text-muted mb-2">{{ product.description|truncatechars:50 }}</p>
+                    <p class="text-danger fw-bolder fs-5 mb-0">Ksh {{ product.price|floatformat:2 }}</p>
+                </div>
+            </a>
+            
+                <div class="card-footer bg-white border-top-0 d-flex justify-content-between gap-2 p-3 pt-0 mt-auto">
+                    <a href="{% url 'product_detail' product.id %}" class="btn btn-outline-secondary btn-sm flex-grow-1">View</a>
+                    
+                    <a href="{% url 'add_to_cart' product.id %}?quantity=1" class="btn btn-success btn-sm flex-grow-1">Add to Cart</a>
+                </div>
         </div>
     </div>
+    {% empty %}
+        <div class="col-12"><p class="alert alert-info text-center">No products are currently available.</p></div>
+    {% endfor %}
+
+</div>
+
+<div class="text-center mt-4 mb-5">
+    <a href="{% url 'products' %}" class="btn btn-primary btn-lg px-5">View All Products</a>
+</div>
+
+---
+
+<div class="bg-dark text-white p-5 rounded-3 mt-5 shadow-lg">
+    <div class="row align-items-center">
+        <div class="col-lg-6">
+            <h3 class="display-6 fw-bold">Never Miss a Deal! 🔔</h3>
+            <p class="mb-4 lead">Subscribe to get instant notifications about exclusive discounts and new arrivals delivered straight to your inbox.</p>
+        </div>
+        <div class="col-lg-6">
+            <form class="row g-3" method="POST" action="{% url 'home' %}">
+                {% csrf_token %} 
+                <div class="col-sm-8">
+                    <input type="email" class="form-control form-control-lg" placeholder="Enter your email address" name="subscribe_email" required>
+                </div>
+                <div class="col-sm-4">
+                    <button type="submit" class="btn btn-warning btn-lg w-100 fw-bold">Subscribe</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
