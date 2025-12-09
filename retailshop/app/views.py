@@ -572,55 +572,132 @@ def sales_dashboard(request):
     return render(request, 'app/sales_dashboard.html', context)
 
 @login_required(login_url='login')
+@transaction.atomic # Ensures all database changes are saved together
 def process_order(request):
-    """Handles the form submission, creates the Order, and empties the cart."""
+    """
+    Handles form submission from checkout, creates the Order, and initiates payment.
+    """
     if request.method == 'POST':
+        # 1. Fetch Cart and Cart Total
+        try:
+            cart = Cart.objects.get(user=request.user)
+            cart_total = cart.get_total_price() # 🟢 Automatically fetches the dynamic total
+            
+            if cart_total <= 0:
+                messages.error(request, "Your cart is empty or the total is zero.")
+                return redirect('cart_view')
+                
+        except Cart.DoesNotExist:
+            messages.error(request, "Your cart is empty.")
+            return redirect('products')
+
+        # 2. Extract Data from POST
         address_form = CheckoutForm(request.POST)
         payment_method = request.POST.get('payment_method')
+        fulfillment_method = request.POST.get('fulfillment_method') # From the radio button
         
+        # M-Pesa specific field (may be empty if Cash is selected)
+        mpesa_phone_number = request.POST.get('phone_number')
+
         if address_form.is_valid():
-            try:
-                cart = Cart.objects.get(user=request.user)
-            except Cart.DoesNotExist:
-                messages.error(request, "Cart not found.")
-                return redirect('home')
             
-            # 1. Create the Order object
+            # --- Address/Fulfillment Handling ---
+            if fulfillment_method == 'Delivery':
+                # Use cleaned data only if delivery is selected
+                shipping_address = {
+                    'first_name': address_form.cleaned_data['first_name'],
+                    'phone_number': address_form.cleaned_data['phone_number'],
+                    'address_line_1': address_form.cleaned_data['address_line_1'],
+                    'city': address_form.cleaned_data['city'],
+                    # ... include all necessary address fields
+                }
+            else:
+                # Set shipping details to empty if Pickup is selected
+                shipping_address = {}
+
+
+            # 3. Create the Order Object (Status is Pending until payment confirms)
             order = Order.objects.create(
                 user=request.user,
-                total_amount=cart.get_total_price(),
+                total_amount=cart_total,
                 payment_method=payment_method,
-                status='Pending',
+                status='Pending', # Initial Status
+                fulfillment_method=fulfillment_method,
                 
-                # Add shipping details from the form
-                first_name=address_form.cleaned_data['first_name'],
-                phone_number=address_form.cleaned_data['phone_number'],
-                address_line_1=address_form.cleaned_data['address_line_1'],
-                city=address_form.cleaned_data['city'],
-                # ... include all necessary form fields here
+                # Apply shipping address only if Delivery was chosen
+                **shipping_address
             )
 
-            # 2. Transfer CartItems to OrderItems
-            for cart_item in cart.items.all():
+            # 4. Transfer CartItems to OrderItems
+            # IMPORTANT: Assuming you have an OrderItem model defined!
+            for cart_item in cart.items.select_related('product'):
                 OrderItem.objects.create(
                     order=order,
                     product=cart_item.product,
                     quantity=cart_item.quantity,
-                    price=cart_item.product.price
+                    price=cart_item.product.price # Save the price at the time of purchase
                 )
-                
-            # 3. Clear the Cart
-            cart.items.all().delete()
-            
-            messages.success(request, f"Order #{order.id} placed successfully! Thank you.")
-            return redirect('order_confirmation', order_id=order.id)
-        
-        else:
-            messages.error(request, "Please correct the errors in your address.")
-            return redirect('checkout')
-            
-    return redirect('checkout') # Redirect GET requests away
 
+            # --- PAYMENT METHOD EXECUTION ---
+            if payment_method == 'M-Pesa':
+                
+                # Check for required M-Pesa phone number
+                if not mpesa_phone_number or not mpesa_phone_number.startswith('2547'):
+                    messages.error(request, "Invalid M-Pesa phone number. Must be in 2547XXXXXXXX format.")
+                    # 🛑 CRITICAL: Delete the order since payment cannot be initiated
+                    order.delete() 
+                    return redirect('checkout_view')
+
+                # 5. Initiate M-Pesa STK Push
+                try:
+                    # Amount must be an integer and cannot be zero or negative
+                    amount_int = max(1, int(cart_total)) 
+                    account_reference = f"ORD{order.id}" # Unique identifier tied to the order
+                    transaction_desc = f"Payment for Order #{order.id}"
+                    
+                    # 🟢 Uses the calculated cart_total (now amount_int)
+                    response = cl.stk_push(
+                        mpesa_phone_number, 
+                        amount_int, 
+                        CALLBACK_URL, 
+                        account_reference, 
+                        transaction_desc
+                    )
+                    
+                    # Log/Save the M-Pesa request data (optional but recommended for debugging)
+                    # Example: Order.objects.filter(id=order.id).update(mpesa_request_id=response.get('MerchantRequestID'))
+
+                    # 6. Clear the Cart (Only clear cart after successful payment initiation)
+                    cart.items.all().delete()
+                    
+                    messages.success(request, f"M-Pesa STK Push initiated for Ksh {amount_int}. Please check your phone!")
+                    return redirect('order_confirmation', order_id=order.id)
+                    
+                except Exception as e:
+                    messages.error(request, f"Payment failed to initiate. Try again or choose Cash on Delivery. Error: {e}")
+                    # 🛑 CRITICAL: Delete the order if the payment request failed
+                    order.delete()
+                    return redirect('checkout_view')
+
+
+            elif payment_method == 'Cash on Delivery':
+                # 5. Handle Cash on Delivery (COD)
+                order.status = 'Processing' # Or 'Pending COD'
+                order.payment_status = 'Pending COD'
+                order.save()
+                
+                # 6. Clear the Cart
+                cart.items.all().delete()
+                
+                messages.success(request, f"Order #{order.id} placed successfully! You will pay cash on {fulfillment_method}.")
+                return redirect('order_confirmation', order_id=order.id)
+
+        else:
+            # Form validation failed
+            messages.error(request, "Please correct the errors in the shipping details.")
+            return redirect('checkout_view')
+            
+    return redirect('checkout_view')
 
 # 🎯 CUSTOM LOGIN VIEW
 class CustomLoginView(BaseLoginView):

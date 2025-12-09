@@ -1,7 +1,7 @@
 {% extends "main.html" %}
 {% load static %}
 
-{% block title %}{{ title }} – RetailShop{% endblock %} 
+{% block title %}{{ title }} Products– RetailShop{% endblock %} 
 
 {% block content %}
 <div class="container mt-5">
@@ -52,21 +52,7 @@
                         <div class="card-footer bg-light">
                             <a href="{% url 'product_detail' product.id %}" class="btn btn-outline-secondary btn-sm w-100 mb-2">View Details</a>
 
-                            <form method="POST" action="{% url 'initiate_mpesa' product.id %}" class="mb-2">
-                                {% csrf_token %}
-                                <div class="input-group input-group-sm">
-                                    <input type="text" name="phone_number" class="form-control" placeholder="M-Pesa 2547..." required 
-                                           pattern="^2547[0-9]{8}$" title="e.g., 2547xxxxxxxx">
-                                    <input type="hidden" name="quantity" value="1">
-                                    <button type="submit" class="btn btn-success">M-Pesa Buy</button>
-                                </div>
-                            </form>
-
-                            <form method="POST" action="{% url 'cash_checkout' product.id %}" class="mb-2">
-                                {% csrf_token %}
-                                <input type="hidden" name="quantity" value="1">
-                                <button type="submit" class="btn btn-primary btn-sm w-100">Pay by Cash</button>
-                            </form>
+                    
 
                             <form method="POST" action="{% url 'add_to_cart' product.id %}">
                                 {% csrf_token %}

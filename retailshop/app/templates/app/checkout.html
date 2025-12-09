@@ -7,6 +7,15 @@
 <div class="container my-5">
     <h1 class="fw-bold mb-4">Finalize Order & Checkout</h1>
 
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+
     <div class="row">
         
         <div class="col-lg-5 order-lg-2 mb-4">
@@ -16,8 +25,8 @@
                 </div>
                 <div class="card-body">
                     <ul class="list-group list-group-flush mb-3">
-                        {% for item in cart_items %} <li class="list-group-item d-flex align-items-center small p-2">
-                            
+                        {% for item in cart_items %}
+                        <li class="list-group-item d-flex align-items-center small p-2">
                             <div style="width: 50px; height: 50px; overflow: hidden; margin-right: 10px; border: 1px solid #eee;">
                                 {% if item.product.image %}
                                     <img src="{{ item.product.image.url }}" class="img-fluid" style="object-fit: contain; width: 100%; height: 100%;" alt="{{ item.product.name }}">
@@ -25,17 +34,14 @@
                                     <img src="{% static 'images/prod-placeholder.jpg' %}" class="img-fluid" alt="Placeholder">
                                 {% endif %}
                             </div>
-                            
                             <div class="flex-grow-1">
                                 <div>{{ item.quantity }} x <span class="fw-bold">{{ item.product.name|truncatechars:20 }}</span></div>
                                 <div class="text-muted small">@ Ksh {{ item.product.price|floatformat:2 }} ea.</div>
                             </div>
-                            
                             <span class="fw-bold text-end">Ksh {{ item.subtotal|floatformat:2 }}</span>
                         </li>
                         {% endfor %}
                     </ul>
-                    
                     <div class="d-flex justify-content-between border-top pt-2">
                         <span class="fw-bold">Cart Total:</span>
                         <span class="fw-bold fs-5 text-danger">Ksh {{ cart_total|floatformat:2 }}</span>
@@ -43,51 +49,75 @@
                 </div>
             </div>
         </div>
-
+        
         <div class="col-lg-7 order-lg-1">
             <form method="POST" action="{% url 'process_order' %}">
                 {% csrf_token %}
-
+                
                 <div class="card mb-4 shadow-sm">
                     <div class="card-header bg-light">
-                        <h5 class="mb-0">1. Shipping Information</h5>
+                        <h5 class="mb-0">1. Fulfillment Method</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="fulfillment_method" id="delivery" value="Delivery" checked required data-bs-toggle="collapse" data-bs-target="#shipping_info_card" aria-expanded="true">
+                            <label class="form-check-label fw-bold" for="delivery">
+                                Order Delivery 
+                            </label>
+                            <p class="small text-muted ms-4 mb-0">Products will be shipped to the address below.</p>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="fulfillment_method" id="pickup" value="Pickup" required data-bs-toggle="collapse" data-bs-target="#shipping_info_card" aria-expanded="false">
+                            <label class="form-check-label fw-bold" for="pickup">
+                                In-Store Pickup
+                            </label>
+                            <p class="small text-muted ms-4 mb-0">Collect your order at our physical retail shop.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="shipping_info_card" class="collapse show card mb-4 shadow-sm">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">2. Order Information (Shipping Address)</h5>
                     </div>
                     <div class="card-body">
                         {% for field in address_form %}
-                            <div class="mb-3">
-                                <label class="form-label">{{ field.label }}</label>
-                                {{ field }}
-                                {% for error in field.errors %}
-                                    <div class="text-danger small">{{ error }}</div>
-                                {% endfor %}
-                            </div>
+                        <div class="mb-3">
+                            <label class="form-label">{{ field.label }}</label>
+                            {{ field }} 
+                            {% for error in field.errors %}
+                                <div class="text-danger small">{{ error }}</div>
+                            {% endfor %}
+                        </div>
                         {% endfor %}
                     </div>
                 </div>
-
+                
                 <div class="card mb-4 shadow-sm">
                     <div class="card-header bg-light">
-                        <h5 class="mb-0">2. Payment Method</h5>
+                        <h5 class="mb-0">3. Payment Method</h5>
                     </div>
                     <div class="card-body">
                         <div class="form-check">
-                            <input class="form-check-input" type="radio" name="payment_method" id="mpesa" value="M-Pesa" checked required>
-                            <label class="form-check-label fw-bold" for="mpesa">
-                                M-Pesa (Mobile Money)
-                            </label>
+                            <input class="form-check-input" type="radio" name="payment_method" id="mpesa" value="M-Pesa" checked required data-bs-toggle="collapse" data-bs-target="#mpesa_phone_field_wrapper" aria-expanded="true">
+                            <label class="form-check-label fw-bold" for="mpesa">M-Pesa (Mobile Money)</label>
                         </div>
                         <p class="small text-muted ms-4">Pay securely using M-Pesa on completion.</p>
 
-                        <div class="form-check mt-3">
-                            <input class="form-check-input" type="radio" name="payment_method" id="cash" value="Cash on Delivery" required>
-                            <label class="form-check-label fw-bold" for="cash">
-                                Cash on Delivery (COD)
-                            </label>
+                        <div id="mpesa_phone_field_wrapper" class="collapse show mt-3">
+                            <label for="id_phone_number" class="form-label fw-bold">M-Pesa Phone Number (2547XXXXXXXX)</label>
+                            <input type="text" id="id_phone_number" name="phone_number" class="form-control" placeholder="e.g., 2547XXXXXXXX" required>
                         </div>
+                        
+                        <div class="form-check mt-3">
+                            <input class="form-check-input" type="radio" name="payment_method" id="cash" value="Cash on Delivery" required data-bs-toggle="collapse" data-bs-target="#mpesa_phone_field_wrapper" aria-expanded="false">
+                            <label class="form-check-label fw-bold" for="cash">Cash on Delivery (COD)</label>
+                        </div>
+                        <p class="small text-muted ms-4">Pay upon delivery.</p>
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn-success btn-lg w-100 fw-bold">
+                <button type="submit" class="btn btn-primary btn-lg mt-4 w-100">
                     Place Order - Ksh {{ cart_total|floatformat:2 }}
                 </button>
             </form>
@@ -95,3 +125,77 @@
     </div>
 </div>
 {% endblock %}
+
+{% block scripts %}
+<script>
+    // --- Element References ---
+    const shippingCard = document.getElementById('shipping_info_card');
+    const deliveryRadio = document.getElementById('delivery');
+    const pickupRadio = document.getElementById('pickup');
+    // Using querySelectorAll here is fine, as it reflects the initial state
+    const addressFields = shippingCard ? shippingCard.querySelectorAll('input, select, textarea') : [];
+    
+    // Payment
+    const mpesaRadio = document.getElementById('mpesa');
+    const cashRadio = document.getElementById('cash');
+    const phoneInput = document.getElementById('id_phone_number');
+
+
+    // 1. --- FULFILLMENT LOGIC ---
+    function toggleShippingValidation(isDelivery) {
+        if (!shippingCard) return;
+
+        addressFields.forEach(field => {
+            if (isDelivery) {
+                field.setAttribute('required', 'required');
+                field.removeAttribute('disabled');
+            } else {
+                field.removeAttribute('required');
+                field.setAttribute('disabled', 'disabled');
+                // 🛑 CRITICAL FIX: Clear field value when disabled to prevent validation issues
+                field.value = '';
+            }
+        });
+    }
+
+    // 2. --- PAYMENT LOGIC ---
+    function togglePhoneValidation(method) {
+        if (!phoneInput) return;
+        
+        const isMpesa = (method === 'M-Pesa');
+        
+        if (isMpesa) {
+            // SHOW: Enable and Require
+            phoneInput.setAttribute('required', 'required');
+            phoneInput.removeAttribute('disabled');
+        } else {
+            // HIDE: Disable and Remove Required
+            phoneInput.removeAttribute('required');
+            phoneInput.setAttribute('disabled', 'disabled'); 
+            
+            // 🛑 CRITICAL: CLEAR THE VALUE to prevent stale data failing validation when hidden
+            phoneInput.value = ''; 
+        }
+    }
+
+    // 3. --- Initialization and Event Listeners ---
+    document.addEventListener('DOMContentLoaded', function() {
+        
+        // --- FULFILLMENT SETUP & LISTENERS ---
+        if (deliveryRadio && pickupRadio) {
+            toggleShippingValidation(deliveryRadio.checked); 
+            deliveryRadio.addEventListener('change', () => toggleShippingValidation(true));
+            pickupRadio.addEventListener('change', () => toggleShippingValidation(false));
+        }
+
+        // --- PAYMENT SETUP & LISTENERS ---
+        if (mpesaRadio && cashRadio) {
+            const initialPaymentMethod = document.querySelector('input[name="payment_method"]:checked').value;
+            togglePhoneValidation(initialPaymentMethod);
+            
+            mpesaRadio.addEventListener('change', () => togglePhoneValidation('M-Pesa'));
+            cashRadio.addEventListener('change', () => togglePhoneValidation('Cash on Delivery'));
+        }
+    });
+</script>
+{% endblock scripts %}
